@@ -1,0 +1,1 @@
+使用 ffmpeg 实现视频转图片的 windows 脚本，需要有 java sdk。
