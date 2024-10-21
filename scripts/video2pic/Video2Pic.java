@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 public class Video2Pic {
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.out.println(">>>>>>>>>> 没有提供视频文件路径，无法转换！");
+            System.out.println("\n»»»»»»»»»» 没有提供视频文件路径，无法转换！" + "\n");
             return;
         }
 
@@ -14,7 +14,7 @@ public class Video2Pic {
         File file = new File(videoPath);
 
         if (!file.exists() || !file.isFile()) {
-            System.out.println(">>>>>>>>>> 视频文件路径错误，无法转换！");
+            System.out.println("\n»»»»»»»»»» 视频文件路径错误，无法转换！" + "\n");
             return;
         }
 
@@ -50,10 +50,10 @@ public class Video2Pic {
             // 等待进程结束
             int exitCode = process.waitFor();
             if (exitCode == 0) {
-                System.out.println(">>>>>>>>>> 视频转换为图片列表成功！");
-                System.out.println(">>>>>>>>>> 图片路径：" + outputImagePath);
+                System.out.println("\n»»»»»»»»»» 视频转换为图片列表成功！\n");
+                System.out.println("\n»»»»»»»»»» 图片路径：" + outputImagePath + "\n");
             } else {
-                System.out.println(">>>>>>>>>> 视频转换失败，退出代码：" + exitCode);
+                System.out.println("\n»»»»»»»»»» 视频转换失败，退出代码：" + exitCode + "\n");
             }
         } catch (Exception e) {
             e.printStackTrace();
