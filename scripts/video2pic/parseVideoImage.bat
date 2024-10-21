@@ -7,7 +7,7 @@ if "%~1"=="" (
     exit /b 1
 )
 
-REM 检查目录是否存在
+REM 检查目录是否存在，echo. 输出空行。
 if exist "%1" (
 	echo.
     echo »»»»»»»»»» 路径存在: %1
