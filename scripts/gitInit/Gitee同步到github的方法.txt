@@ -1,0 +1,11 @@
+# 克隆Gitee上的仓库到本地
+git clone https://gitee.com/your_username/your_repo.git
+ 
+# 进入仓库目录
+cd your_repo
+ 
+# 添加GitHub仓库为远程仓库
+git remote add github https://github.com/your_username/new_repo.git
+ 
+# 推送代码到GitHub
+git push github master
