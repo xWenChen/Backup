@@ -34,4 +34,4 @@ fi
 
 # 输出公钥内容
 cat "$PUB_KEY_FILE"
-echo -e "\n将密钥配置到 git 远端后，请执行 ${GREEN}ssh -T $GIT_EMAIL${RESET} 命令查看链接是否生效。"
+echo -e "\n将密钥配置到 git 远端后，请执行 ${GREEN}ssh -T git@github.com${RESET} 命令查看链接是否生效。"
