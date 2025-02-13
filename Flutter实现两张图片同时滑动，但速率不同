@@ -217,9 +217,10 @@ class _ImagePainter extends CustomPainter {
     final dst = Rect.fromLTWH(0, 0, viewWidth, viewHeight);
 
     // 绘制圆角定义圆角矩形
-    final rRect = RRect.fromRectAndRadius(dst, Radius.circular(radius));
+    final rRect = RRect.fromRectAndRadius(src, Radius.circular(radius));
     // 裁剪画布
-    canvas..clipRRect(rRect)
+    canvas
+      ..clipRRect(rRect)
       ..drawImageRect(image, src, dst, paint);
   }
 
