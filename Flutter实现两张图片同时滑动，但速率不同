@@ -151,9 +151,11 @@ class _ClipperImageState extends State<ClipperImage> {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: painter,
-      size: widget.size,
+    return IgnorePointer( // 透传点击事件到下方，不做拦截。
+      child: CustomPaint(
+        painter: painter,
+        size: widget.size,
+      ),
     );
   }
 
@@ -214,7 +216,11 @@ class _ImagePainter extends CustomPainter {
     );
     final dst = Rect.fromLTWH(0, 0, viewWidth, viewHeight);
 
-    canvas.drawImageRect(image, src, dst, paint);
+    // 绘制圆角定义圆角矩形
+    final rRect = RRect.fromRectAndRadius(dst, Radius.circular(radius));
+    // 裁剪画布
+    canvas..clipRRect(rRect)
+      ..drawImageRect(image, src, dst, paint);
   }
 
   @override
