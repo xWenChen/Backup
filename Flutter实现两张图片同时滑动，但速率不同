@@ -1,0 +1,224 @@
+
+import 'dart:async';
+import 'dart:ui' as dui show Image;
+
+import 'package:camp_common/camp_common.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:my_flutter/banner_data.dart';
+import 'package:my_flutter/gen/assets.gen.dart';
+
+class BannerImageItem extends StatefulWidget {
+  BannerImageItem({
+    this.index = 0,
+    this.data,
+    this.scrollNotifier,
+    this.width,
+    double? imageRatio,
+    this.radius = 4,
+    this.generatePadding,
+    super.key,
+  }) : imageRatio = imageRatio ?? 343 / 126;
+
+  int index;
+  BannerData? data;
+  ScrollNotifier? scrollNotifier;
+  double? width;
+  double imageRatio;
+  double radius;
+  EdgeInsetsGeometry? Function(int index, BannerData? data)? generatePadding;
+
+  @override
+  State<BannerImageItem> createState() => _BannerImageItemState();
+
+}
+
+class _BannerImageItemState extends State<BannerImageItem> {
+  static const String _tag = '_BannerImageItemState';
+  double leftOffset = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    widget?.scrollNotifier?.addListener((){
+      // 监听滚动状态。
+      if (mounted) {
+        final object = context.findRenderObject();
+        if (object == null) {
+          return;
+        }
+        try {
+          final renderObject = object as RenderBox;
+          final width = renderObject.size.width;
+          final position = renderObject.localToGlobal(Offset.zero);
+          // 8 是组件距离屏幕左侧的距离 xOffset是组件滑动了多少距离
+          final xOffset = position.dx;
+          // 业务自己计算
+          setState(() {
+            // 想要更改错位移动的距离，更改 100 的值即可。
+            leftOffset = xOffset / width * 100 + 1;
+          });
+        } catch (e) {
+          Log.e(_tag, e.toString());
+        }
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    if (data == null) {
+      return Image.asset(
+        Assets.images.defaultIcon.path,
+        type: ImageType.center,
+      );
+    }
+    return Container(
+      padding: widget.generatePadding?.call(widget.index, widget.data),
+      child: Stack(
+        alignment: Alignment.bottomLeft,
+        children: [
+          // 底部图片
+          AspectRatio(
+            aspectRatio: widget.imageRatio,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(widget.radius),
+              child: Image.network(
+                data.icon,
+                width: widget.width ?? double.infinity,
+                type: ImageType.fitWidth,
+                alignment: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          // 上层的图片
+          Visibility(
+            visible: !data.icon2.isNullOrBlank(),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final width = constraints.maxWidth;
+                final size = Size(width, width / widget.imageRatio);
+                // 自定义实现图片滑动的效果，防止组件裁剪
+                return ClipperImage(
+                  imageProvider: NetworkImage(data.icon2!),
+                  offsetX: leftOffset,
+                  size: size,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 可以在屏幕外绘制图片的组件
+class ClipperImage extends StatefulWidget {
+
+  const ClipperImage({
+    required this.imageProvider,
+    required this.size,
+    this.offsetX = 0.0,
+    super.key,
+  });
+
+  final ImageProvider imageProvider;
+  final double offsetX;
+  final Size size;
+
+  @override
+  State<ClipperImage> createState() => _ClipperImageState();
+}
+
+class _ClipperImageState extends State<ClipperImage> {
+  _ImagePainter? painter;
+
+  @override
+  initState() {
+    // 异步加载图片。
+    _getImage();
+    super.initState();
+  }
+
+  @override
+  void didUpdateWidget(covariant ClipperImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 刷新偏移数据
+    painter?.offset = widget.offsetX;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: painter,
+      size: widget.size,
+    );
+  }
+
+  @override
+  void dispose() {
+    painter = null;
+    super.dispose();
+  }
+
+  /// 下载网络图片。
+  Future<void> _getImage() async {
+    final imageInfo = await getImageInfoByProvider(widget.imageProvider);
+    painter = _ImagePainter(imageInfo.image, widget.offsetX, widget.size);
+    setState(() {});
+  }
+
+  Future<ImageInfo> getImageInfoByProvider(ImageProvider provider) {
+    final completer = Completer<ImageInfo>();
+    var ok = false;
+    provider.resolve(ImageConfiguration.empty).addListener(ImageStreamListener((info, _) {
+      if (!ok) {
+        completer.complete(info);
+        ok = true;
+      }
+    }),);
+    return completer.future;
+  }
+}
+
+class _ImagePainter extends CustomPainter {
+  _ImagePainter(
+    this.image,
+    this.offset,
+    this.viewSize,
+  );
+
+  dui.Image image;
+  double offset;
+  Size viewSize;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint();
+    final imgWidth = image.width;
+    final imgHeight = image.height;
+    final viewWidth = viewSize.width;
+    final viewHeight = viewSize.height;
+    final midWidth = imgWidth / 2;
+
+    final srcWidth = (viewWidth / viewHeight) * imgHeight;
+
+    // 默认当作宽度>高度，宽度超了，高度没超。图片按照 View 的宽高比取宽度，高度占满。
+    Rect src = Rect.fromLTWH(
+      midWidth - srcWidth / 2 - offset,
+      0,
+      srcWidth - offset,
+      imgHeight.toDouble(),
+    );
+    final dst = Rect.fromLTWH(0, 0, viewWidth, viewHeight);
+
+    canvas.drawImageRect(image, src, dst, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+}
