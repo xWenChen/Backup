@@ -1,0 +1,159 @@
+import android.content.Context;
+import android.graphics.Canvas;
+import android.os.Build;
+import android.text.Layout;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.text.StaticLayout;
+import android.text.style.ForegroundColorSpan;
+import android.util.AttributeSet;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatTextView;
+
+public class EndEllipsizeTextView extends AppCompatTextView {
+    public interface OnTextShowListener {
+        void onTextShow(boolean isShowEndEllipsize);
+    }
+
+    public static final String DEFAULT_END_ELLIPSIZE = "...";
+    public static final SpannableStringBuilder FULL_TEXT_END_ELLIPSIZE = new SpannableStringBuilder()
+        .append("...")
+        .append("全文",
+            new ForegroundColorSpan(MyApplication.getApplication().getResources().getColor(R.color.YELLOW)),
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+    private CharSequence endEllipsize = DEFAULT_END_ELLIPSIZE;
+    private SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder();
+    // 最后一个字符锚点的 index
+    @SuppressWarnings("FieldCanBeLocal")
+    private int lastCharDown;
+    @SuppressWarnings("FieldCanBeLocal")
+    private int targetIndex;
+    /**
+     * 结尾省略标志的宽度
+     */
+    private float endEllipsizeWidth = 0f;
+
+    private OnTextShowListener onTextShowListener;
+    private boolean isTextSetInner = false;
+
+    private boolean alreadySet = false;
+
+    public EndEllipsizeTextView(Context context) {
+        super(context);
+        init();
+    }
+
+    public EndEllipsizeTextView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+
+    public EndEllipsizeTextView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init();
+    }
+
+    private void init() {
+        calculateEndEllipsizeWidth();
+    }
+
+    protected void onDraw(Canvas canvas) {
+        if (getLineCount() > getMaxLines()) {
+            CharSequence charSequence = getText();
+            lastCharDown = getLayout().getLineVisibleEnd(getMaxLines() - 1);
+            if (charSequence.length() > lastCharDown && !alreadySet) {
+                spannableStringBuilder.clear();
+                targetIndex = getTargetIndex(endEllipsizeWidth, lastCharDown);
+                spannableStringBuilder.append(charSequence.subSequence(0, targetIndex)).append(endEllipsize);
+                setText(spannableStringBuilder);
+                alreadySet = true;
+                isTextSetInner = true;
+                if (onTextShowListener != null) {
+                    onTextShowListener.onTextShow(true);
+                }
+            }
+        }
+
+        if (!isTextSetInner) {
+            if (onTextShowListener != null) {
+                onTextShowListener.onTextShow(false);
+            }
+        }
+        super.onDraw(canvas);
+    }
+
+    /**
+     * 计算结尾省略提示字符的宽度
+     * */
+    private void calculateEndEllipsizeWidth() {
+        endEllipsizeWidth = 0;
+        StaticLayout layout;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            layout = StaticLayout.Builder.obtain(endEllipsize, 0, endEllipsize.length(), getPaint(), 10000).build();
+        } else {
+            layout = new StaticLayout(endEllipsize, getPaint(), 10000, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false);
+        }
+        for(int i = 0; i < layout.getLineCount(); i++) {
+            endEllipsizeWidth += layout.getLineWidth(i);
+        }
+    }
+
+    private int getTargetIndex(float targetWidth, int lastCharDown) {
+        int firstCharDown = 0;
+        if(getMaxLines() >= 2) {
+            firstCharDown = getLayout().getLineVisibleEnd(getMaxLines() - 2) + 1;
+        }
+        float nowTextWidth = getLayout().getLineWidth(getMaxLines() - 1);
+        float availableTextWidth = getAvailableTextWidth();
+        // 目标宽度 + 省略提示符的宽度小于等于可用的文本宽度
+        if(nowTextWidth + targetWidth <= availableTextWidth) {
+            return lastCharDown;
+        }
+        int result = lastCharDown;
+        for (int i = firstCharDown; i <= result; i++) {
+            float tempWidth = getPaint().measureText(getText().subSequence(firstCharDown, i + 1).toString());
+            if (tempWidth + targetWidth == availableTextWidth) {
+                result = i;
+                break;
+            }
+            if (tempWidth + targetWidth > availableTextWidth) {
+                // 防止下标越界，锚点为负
+                result = Math.max(i - 1, 0);
+                break;
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public void setText(CharSequence text, BufferType type) {
+        super.setText(text, type);
+        alreadySet = false;
+    }
+
+    public CharSequence getEndEllipsize() {
+        return endEllipsize;
+    }
+
+    public void setEndEllipsize(CharSequence endEllipsize) {
+        this.endEllipsize = endEllipsize;
+        calculateEndEllipsizeWidth();
+    }
+
+    public OnTextShowListener getOnTextShowListener() {
+        return onTextShowListener;
+    }
+
+    public void setOnTextShowListener(OnTextShowListener onTextShowListener) {
+        this.onTextShowListener = onTextShowListener;
+    }
+
+    /**
+     * 获取绘制文本时，可使用的区域
+     * */
+    private float getAvailableTextWidth() {
+        return getWidth() - getCompoundPaddingStart() - getCompoundPaddingEnd();
+    }
+}
